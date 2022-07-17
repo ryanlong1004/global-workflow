@@ -252,21 +252,6 @@ class Ecflowsetup:
         defs_file = f"{savedir}/ecflow_suite.def"
         self.DEFS.save_as_defs(defs_file)
 
-    def print(self):
-        """
-        Prints out what would be populated to the suite definition file.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-        """
-        print(self.DEFS.check())
-        print(self.DEFS)
-
     def add_environment_edits(self, suite):
         """
         The suite is passed in and the edits from the environment are added. The
