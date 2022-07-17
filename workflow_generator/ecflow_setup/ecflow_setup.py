@@ -233,27 +233,6 @@ class Ecflowsetup:
         for suite_name, suite in self.suite_array.items():
             self.DEFS += suite.get_suite()
 
-    def raiseexception(self, e):
-        """
-        This is just a simple method that is called if an exception is raised to
-        print out the error message and then call a sys.exit(1) so the app stops
-
-        Calling this method will cause the application to exit with a status
-        code of 1.
-
-        Parameters
-        ----------
-        e : str
-            The error in string format to print out.
-
-        Returns
-        -------
-        None
-        """
-
-        print(e)
-        sys.exit(1)
-
     def save(self):
         """
         This saves the suite definition file to the save dir with the file name
