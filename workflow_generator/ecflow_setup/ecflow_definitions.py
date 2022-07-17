@@ -31,6 +31,7 @@ import os
 import re
 import shutil
 from datetime import datetime, timedelta
+from typing import List
 try:
     import ecflow
 except ImportError as err:
@@ -372,6 +373,7 @@ class Ecflowsuite:
         repeat_token = re.search(
             "(\d{8,10})( | to )(\d{10})( | by )(\d{1,2}:)?(\d{1,2}:\d{1,2})",
             repeat)
+        assert repeat_token != None
         start = repeat_token.group(1).strip()
         end = repeat_token.group(3).strip()
         byday = repeat_token.group(5).strip() if repeat_token.group(5) is not \
@@ -1061,6 +1063,7 @@ class EcfNode():
                     3: self.__set_initial_increment_max_value,
                 }
                 range_token = re.search(r"(.*)\((.*)\)(.*)", self.name)
+                assert range_token != None
                 range_type = range_token.group(2).strip().split(',')
                 self.__base = range_token.group(1).strip()
                 self.__suffix = range_token.group(3).strip()
@@ -1069,6 +1072,7 @@ class EcfNode():
             elif re.search(r".*\[.*\].*", ecfitem):
                 self.is_list = True
                 list_token = re.search(r"(.*)\[(.*)\](.*)", ecfitem)
+                assert list_token != None
                 list_type = list_token.group(2).strip().split(',')
                 self.__base = list_token.group(1).strip()
                 self.__suffix = list_token.group(3).strip()
@@ -1121,7 +1125,7 @@ class EcfNode():
 
         return self.__items
 
-    def get_full_name_items(self, counter=0):
+    def get_full_name_items(self, counter=0) -> List[str]:
         """
         If the item is a range or list, it returns the full names of the items
         with the prefix and suffix strings included, if it is a single then it
@@ -1143,8 +1147,7 @@ class EcfNode():
 
         if self.use_parent_counter:
             return [self.__full_name_items[counter]]
-        else:
-            return self.__full_name_items
+        return self.__full_name_items
 
     def __set_max_value(self, range_token):
         """
