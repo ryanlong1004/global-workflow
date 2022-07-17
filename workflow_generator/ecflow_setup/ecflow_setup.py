@@ -189,6 +189,7 @@ class Ecflowsetup:
             # from the list and then run it through a for loop to get all
             # possible values.
             name_token = re.search("(.*)\[(.*)\](.*)", suitename)
+            assert name_token != None
             base = name_token.group(1).strip()
             list_items = name_token.group(2).strip().split(',')
             suffix = name_token.group(3).strip()
@@ -276,6 +277,7 @@ class Ecflowsetup:
         # Add in the edits for the environment.
         for edit in self.environment_edits:
             edit = edit.upper()
+            edit_dict = None
             if (edit in self.env_configs['base'].keys() and
                     self.env_configs['base'][edit] is not None):
                 edit_dict = {edit: self.env_configs['base'][edit]}
@@ -400,6 +402,7 @@ class Ecflowsetup:
                 suite.add_ecfsuite_node(item, family_node)
                 for family in family_node.get_full_name_items():
                     suite.add_family(family, parents)
+                    assert isinstance(family, "str")
                     index = family_node.get_full_name_items().index(family)
                     if parents:
                         family_path = f"{parents}>{family}"
@@ -578,9 +581,8 @@ def load_ecflow_config(configfile):
         file.
     """
 
-    with open(configfile, 'r') as file:
-        base_config = yaml.safe_load(file)
-    return base_config
+    with open(configfile, 'r') as _file:
+        return yaml.safe_load(_file)
 
 
 def find_env_param(node, value, envconfig):
