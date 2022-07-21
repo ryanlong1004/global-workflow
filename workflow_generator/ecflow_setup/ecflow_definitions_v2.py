@@ -5,20 +5,16 @@ suite test
    task t1
 endsuite
 """
-from collections import UserDict, UserList
-import sys
 import os
-import re
 import shutil
-from datetime import datetime, timedelta
 from typing import List, Union
-from abc import ABC, abstractmethod
+from abc import ABC
 
-Comment = str
-Edit = str
 
 class Node(ABC):
     """represents any leaf of the ecf tree"""
+
+    _type = "node"
 
     def __init__(self, name: str, parent=None):
         self.name = name
@@ -27,15 +23,20 @@ class Node(ABC):
         self.manuals = []
         self.edits = []
 
-    @abstractmethod
-    def add_manual(self, text: Union[List[str], str] ):
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__} {self.name}/>"
+
+    def type(self) -> str:
+        """returns the type of node"""
+        return self._type
+
+    def add_manual(self, text: Union[List[str], str]):
         """
         A manual page allows documentation in an ecf script to be viewable in ecflow_ui.
         https://confluence.ecmwf.int/display/ECFLOW/Add+Manual
         """
         self.manuals.append(list(text))
 
-    @abstractmethod
     def add_edit(self, text: Union[List[str], str]):
         """
         Adds an edit to either a suite, task, or family. The parent defines
@@ -45,64 +46,99 @@ class Node(ABC):
         """
         self.edits.append(list(text))
 
+    def add_child(self, node: "Node"):
+        """add a child node to the current node"""
+        self.children.append(node)
+
+    def add_parent(self, node: "Node"):
+        """assign a new parent node"""
+        self.parent = node
+
+
+class Trigger:
+    """
+    Where possible you should give preference to triggers on the definitions, since these are checked on creation, whereas embedded triggers are checked at run time.
+
+    Embeded triggers?
+    https://confluence.ecmwf.int/display/ECFLOW/Embedded+Triggers
+    """
+
+
+class Suite(Node):
+    """collection of families"""
+
+    _type = "suite"
+
+    def add_family(self, family: "Family"):
+        """add family to suite"""
+        self.add_child(family)
+
+    def add_task(self, task: "Task"):
+        """add task to suite"""
+        self.add_child(task)
+
+    def define_limit(self):
+        """https://confluence.ecmwf.int/display/ECFLOW/Limits"""
+        pass
+
+
+class Family(Node):
+    """Collection of other families and tasks"""
+
+    _type = "family"
+
+    def add_repeat(self, repeat):
+        """https://confluence.ecmwf.int/display/ECFLOW/Repeat"""
 
     def add_event(self, event):
-        """
-        Adds an event to the parent node. Events can only be associated with
-        families or tasks so if the parent is None, nothing will be added.
-        This was done to avoid errors.
-
-        Parameters
-        ----------
-        event : str
-            A string that is passed to the ecflow.Event object
-        parent : str
-            String for the parent node that will get the events added.
-
-        Returns
-        -------
-        None
-        """
+        """add an event"""
         raise NotImplementedError
 
-        
+    def add_family(self, family: "Family"):
+        """add a family"""
+        self.add_child(family)
 
-    @abstractmethod
-    def set_trigger(self, trigger: 'Trigger'):
-        """
-        Adds a trigger to the parent node. Triggers can be added to families
-        and tasks.
+    def add_task(self, task: "Task"):
+        """add a task"""
+        self.add_child(task)
 
-        ** A node can only have one trigger expression **
-        https://confluence.ecmwf.int/display/ECFLOW/Add+Trigger
+    def use_limit(self):
+        """https://confluence.ecmwf.int/display/ECFLOW/Limits"""
+        pass
+
+
+class Task(Node):
+    """represents task"""
+
+    _type = "task"
+
+    def __init__(self, name):
+        self.trigger: Union[Trigger, None] = None
+        super().__init__(name)
+
+    def add_cron(self):
         """
+        https://confluence.ecmwf.int/display/ECFLOW/Add+a+Cron
+        """
+
+    def add_label(self):
+        """
+        https://confluence.ecmwf.int/display/ECFLOW/Labels
+        """
+
+    def add_repeat(self, repeat):
+        """https://confluence.ecmwf.int/display/ECFLOW/Repeat"""
+
+    def add_trigger(self, trigger: "Trigger"):
+        """ """
         if self.trigger != None:
-            raise ValueError("Trigger already defined: [%s] -> [%s]", self.name, self.trigger)
+            raise ValueError(f"trigger already defined. [{self.name}]-> {self.trigger}")
         self.trigger = trigger
 
+    def add_event(self, event: "Event"):
+        """ """
+        raise NotImplementedError
 
-class Meter:
-    """
-    A meter is very similar to an event.
-    Instead of being a boolean value (on/off), it can take a range of integer values.
-    Other tasks are then triggered when the meter reaches a certain value.
-    Like events, meter‘s have names and a task can have several of them.
-
-    https://confluence.ecmwf.int/display/ECFLOW/Add+a+meter
-    """
-
-class TimeDependency:
-    """
-    TODO: 
-    https://confluence.ecmwf.int/display/ECFLOW/Time+Dependencies
-    """
-
-class TimeTrigger:
-    """
-    TODO:
-
-    https://confluence.ecmwf.int/display/ECFLOW/Time+Triggers
-    """
 
 class Event:
     """
@@ -111,6 +147,11 @@ class Event:
 
     https://confluence.ecmwf.int/display/ECFLOW/Add+an+event
     """
+
+
+class Repeat:
+    pass
+
 
 class Complete:
     """
@@ -125,75 +166,37 @@ class Complete:
     https://confluence.ecmwf.int/display/ECFLOW/Add+a+complete
     """
 
-class Repeat:
-    pass
 
-class Trigger:
+class Meter:
     """
-    Where possible you should give preference to triggers on the definitions, since these are checked on creation, whereas embedded triggers are checked at run time.
+    A meter is very similar to an event.
+    Instead of being a boolean value (on/off), it can take a range of integer values.
+    Other tasks are then triggered when the meter reaches a certain value.
+    Like events, meters have names and a task can have several of them.
 
-    Embeded triggers?
-    https://confluence.ecmwf.int/display/ECFLOW/Embedded+Triggers
+    https://confluence.ecmwf.int/display/ECFLOW/Add+a+meter
     """
 
-class Task(Node):
-    """represents task"""
-    def __init__(self, name):
-        self.trigger: Union[Trigger,None] = None
-        super().__init__(name)
-    
 
-    def add_cron(self):
-        """
-        https://confluence.ecmwf.int/display/ECFLOW/Add+a+Cron
-        """
-        pass
-
-    def add_label(self):
-        """
-        https://confluence.ecmwf.int/display/ECFLOW/Labels
-        """
-        pass
-
-    
-    def add_repeat(self, repeat):
-        """https://confluence.ecmwf.int/display/ECFLOW/Repeat
-        """
-
-    def add_trigger(self, trigger):
-        self.trigger: Union[Trigger,None] = None
+class TimeDependency:
+    """
+    TODO:
+    https://confluence.ecmwf.int/display/ECFLOW/Time+Dependencies
+    """
 
 
-class Suite(Node):
-    """collection of families"""
+class TimeTrigger:
+    """
+    TODO:
 
-    def define_limit(self):
-        """https://confluence.ecmwf.int/display/ECFLOW/Limits"""
-        pass
-
-class Family(Node):
-    """Collection of other families and tasks"""
-
-    def __init__(self, tasks: List[Task], families: List['Family']):
-        self.tasks = tasks
-        self.families = families
-
-    
-    def add_repeat(self, repeat):
-        """https://confluence.ecmwf.int/display/ECFLOW/Repeat
-        """
-
-    def use_limit(self):
-        """https://confluence.ecmwf.int/display/ECFLOW/Limits"""
-        pass
-
-
-
+    https://confluence.ecmwf.int/display/ECFLOW/Time+Triggers
+    """
 
 
 def query_state():
     """https://confluence.ecmwf.int/display/ECFLOW/Query+state"""
     pass
+
 
 def generate_ecflow_task(ecfhome, suite, parents, name, template, scriptrepo):
     """
@@ -221,19 +224,13 @@ def generate_ecflow_task(ecfhome, suite, parents, name, template, scriptrepo):
         return
     script_name = f"{name()}.ecf"
     ecfscript = None
-    search_script = f"{template}.ecf" if template is not \
-                                                None else script_name
+    search_script = f"{template}.ecf" if template is not None else script_name
     if parents:
         script_path = f"{ecfhome}/{suite}/{parents.replace('>','/')}/{script_name}"
     else:
         script_path = f"{ecfhome}/{suite}/{script_name}"
-    for root,_,files in os.walk(scriptrepo):
+    for root, _, files in os.walk(scriptrepo):
         if search_script in files and ecfscript is None:
             ecfscript = os.path.join(root, search_script)
     if ecfscript is not None:
         shutil.copyfile(ecfscript, script_path, follow_symlinks=True)
-        
-
-
-
-
