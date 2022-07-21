@@ -14,9 +14,9 @@ from abc import ABC
 class Node(ABC):
     """represents any leaf of the ecf tree"""
 
-    _type = "node"
-
-    def __init__(self, name: str, parent=None):
+    def __init__(self, name: str, parent: "Node"):
+        if name == "__ROOT__":
+            raise ValueError("__ROOT__ node already exists.")
         self.name = name
         self.parent = parent
         self.children = []
@@ -25,10 +25,6 @@ class Node(ABC):
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} {self.name}/>"
-
-    def type(self) -> str:
-        """returns the type of node"""
-        return self._type
 
     def add_manual(self, text: Union[List[str], str]):
         """
@@ -53,6 +49,11 @@ class Node(ABC):
     def add_parent(self, node: "Node"):
         """assign a new parent node"""
         self.parent = node
+        node.add_child(self)
+
+    def root_node(self):
+        """returns the starting node/root"""
+        return Node("__ROOT__", self)
 
 
 class Trigger:
@@ -66,8 +67,6 @@ class Trigger:
 
 class Suite(Node):
     """collection of families"""
-
-    _type = "suite"
 
     def add_family(self, family: "Family"):
         """add family to suite"""
@@ -84,8 +83,6 @@ class Suite(Node):
 
 class Family(Node):
     """Collection of other families and tasks"""
-
-    _type = "family"
 
     def add_repeat(self, repeat):
         """https://confluence.ecmwf.int/display/ECFLOW/Repeat"""
@@ -104,39 +101,40 @@ class Family(Node):
 
     def use_limit(self):
         """https://confluence.ecmwf.int/display/ECFLOW/Limits"""
-        pass
+        raise NotImplementedError
 
 
 class Task(Node):
     """represents task"""
 
-    _type = "task"
-
-    def __init__(self, name):
+    def __init__(self, name: str, parent: Node):
         self.trigger: Union[Trigger, None] = None
-        super().__init__(name)
+        super().__init__(name, parent)
 
     def add_cron(self):
         """
         https://confluence.ecmwf.int/display/ECFLOW/Add+a+Cron
         """
+        raise NotImplementedError
 
     def add_label(self):
         """
         https://confluence.ecmwf.int/display/ECFLOW/Labels
         """
+        raise NotImplementedError
 
     def add_repeat(self, repeat):
         """https://confluence.ecmwf.int/display/ECFLOW/Repeat"""
+        raise NotImplementedError
 
     def add_trigger(self, trigger: "Trigger"):
-        """ """
-        if self.trigger != None:
+        """sets the Task trigger"""
+        if self.trigger is not None:
             raise ValueError(f"trigger already defined. [{self.name}]-> {self.trigger}")
         self.trigger = trigger
 
     def add_event(self, event: "Event"):
-        """ """
+        """add event to the Task"""
         raise NotImplementedError
 
 
