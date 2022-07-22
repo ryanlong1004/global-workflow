@@ -91,10 +91,10 @@ class Family(Node):
         """add an event"""
         raise NotImplementedError
 
-    def add_family(self, family: "Family"):
+    def add_family(self, _family: "Family"):
         """add a family"""
-        family.parent = self
-        self.add_child(family)
+        _family.parent = self
+        self.add_child(_family)
 
     def add_task(self, task: "Task"):
         """add a task"""
@@ -248,14 +248,20 @@ def generate_ecflow_task(ecfhome, suite, parents, name, template, scriptrepo):
 if __name__ == "__main__":
     suite = Suite("root_suite", None)
     family = Family("first family", suite)
-    task = Task("my_task", suite)
-    task2 = Task("my 2nd task", suite)
+    task = Task("my_task", family)
+    family2 = Family("second family", family)
+    task2 = Task("my 2nd task", family)
+    Task3 = Task("abcd", family)
+    task4 = Task("efgh", family2)
 
-    def _unwind(root, accum):
-        for x in root:
-            accum.append(x)
-            if len(x.children) >= 0:
-                accum.append(_unwind(x.children, accum))
+    def _unwind(root_node, accum):
+        if len(accum) == 0:
+            accum.append(root_node)
+        for node in root_node:
+            accum.append(node)
+            for child in node.children:
+                accum.append(child)
+                _unwind(child.children, accum)
         return accum
 
     print(_unwind(suite, []))
