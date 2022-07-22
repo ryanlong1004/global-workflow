@@ -15,7 +15,7 @@ from itertools import chain
 class Node(ABC):
     """represents any leaf of the ecf tree"""
 
-    def __init__(self, name: str, parent: Union[None, "Node"]):
+    def __init__(self, name: str, parent: Union[None, "Node"] = None):
         if name == "__ROOT__":
             raise ValueError("__ROOT__ node already exists.")
         self.name = name
@@ -42,16 +42,23 @@ class Node(ABC):
         A manual page allows documentation in an ecf script to be viewable in ecflow_ui.
         https://confluence.ecmwf.int/display/ECFLOW/Add+Manual
         """
-        self.manuals.append(list(text))
+        if isinstance(text, str):
+            text = [text]
 
-    def add_edit(self, text: Union[List[str], str]):
+        for _line in [f"%manual\n{line}\n%end" for line in text]:
+            self.manuals.append(_line)
+
+    def add_edit(self, edits: Union[List[str], str]):
         """
         Adds an edit to either a suite, task, or family. The parent defines
         what object will get the edit object.
 
         Also edits set variables %VAR%
         """
-        self.edits.append(list(text))
+        if isinstance(edits, str):
+            edits = [edits]
+        for _edit in [f"edit {edit}" for edit in edits]:
+            self.edits.append(_edit)
 
     def add_child(self, node: "Node"):
         """add a child node to the current node"""
@@ -73,7 +80,6 @@ class Suite(Node):
 
     def add_task(self, _task: "Task"):
         """adds a task to the suite"""
-        print("Here")
         _task.parent = self
         self.add_child(_task)
 
@@ -252,7 +258,12 @@ if __name__ == "__main__":
     family2 = Family("second family", family)
     task2 = Task("my 2nd task", family)
     Task3 = Task("abcd", family)
-    task4 = Task("efgh", family2)
+    task4 = Task("efgh", None)
+    family2.add_task(task4)
+
+    task4.add_manual("this is cool")
+    task4.add_manual(["so it this", "this too"])
+    task4.add_edit("abcd = efgh")
 
     def _unwind(root_node, accum):
         if len(accum) == 0:
@@ -264,6 +275,8 @@ if __name__ == "__main__":
                 _unwind(child.children, accum)
         return accum
 
+    print(task4.manuals)
+    print(task4.edits)
     print(_unwind(suite, []))
 
 # level_1_child_1 = Node(34, parent=root)

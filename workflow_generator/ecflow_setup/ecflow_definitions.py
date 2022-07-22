@@ -26,6 +26,7 @@
     OUTPUT:
         None
 """
+from collections import UserDict, UserList
 import sys
 import os
 import re
@@ -36,6 +37,85 @@ try:
     import ecflow
 except ImportError as err:
     raise Exception(f"Error: Could not import ecflow module: {err}")
+
+
+class Node(UserDict):
+    """represents any leaf of the ecf tree"""
+
+    def __init__(self, parent=None):
+        self.parent = parent
+
+    def add_edit(self, edit_dict, parent=None):
+        """
+        Adds an edit to either a suite, task, or family. The parent defines
+        what object will get the edit object.
+        """
+
+
+    def add_event(self, event, parent=None):
+        """
+        Adds an event to the parent node. Events can only be associated with
+        families or tasks so if the parent is None, nothing will be added.
+        This was done to avoid errors.
+
+        Parameters
+        ----------
+        event : str
+            A string that is passed to the ecflow.Event object
+        parent : str
+            String for the parent node that will get the events added.
+
+        Returns
+        -------
+        None
+        """
+
+        if parent:
+            self.ecf_nodes[parent] += ecflow.Event(event)
+
+
+    def add_repeat(self, repeat, parent=None):
+        """
+        Adds in a repeat to the parent node. Repeats can be parts of a family,
+        task, or suite. If the parent is none it will be added to the suite.
+
+        This will calculate the difference between the two dates and use the
+        interval value from the third entry to identify how often. Due to the
+        fact that ecflow has a very simplistic time/date/interval
+        implementation, this function can render the dates in multiple
+        different fashions.
+
+        If the start and end are the same day, it'll just use a time set. If
+        it is different days, it'll do a relative time set with the dates and
+        also a start time. If it is multiple dates it will throw in repeats
+        based on relative values.
+        """
+
+        
+
+    def add_trigger(self, trigger, parent, state=None, event=None, suite=None,
+                    suite_array=None, operand=None):
+        """
+        Adds a trigger to the parent node. Triggers can be added to families
+        and tasks.
+        """
+
+
+class Task(UserList):
+    """represents task"""
+
+class Suite(UserList):
+    """collection of families"""
+
+class Family:
+    """Collection of other families and tasks"""
+
+    def __init__(self, tasks: List[Task], families: List['Family']):
+        self.tasks = tasks
+        self.families = families
+
+
+
 
 
 class Ecflowsuite:

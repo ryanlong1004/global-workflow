@@ -15,19 +15,19 @@
         This will return a dictionary object of suites and then save that to
         a file based on the calls from the setup_workflow.py module.
 """
+from collections import UserDict
 import yaml
 import collections.abc
 import os
 import re
 import sys
 import datetime
-from ecflow_setup.ecflow_definitions import Ecflowsuite, EcfFamilyNode
+from ecflow_setup.ecflow_definitions import Ecflowsuite, EcfFamilyNode, Node, Suite, Family
+from ecflow import Defs
+import logging
 
-try:
-    from ecflow import Defs
-except ImportError as err:
-    print(f"Error: Could not import ecflow module: {err}")
-    sys.exit(1)
+log = logging.getLogger(__name__)
+
 
 
 class Ecflowsetup:
@@ -99,6 +99,13 @@ class Ecflowsetup:
         and error will be thrown.
     """
 
+    environment_edits = [
+            'ACCOUNT',
+            'queue',
+            'machine',
+            'RUN_ENVIR',
+        ]
+
     def __init__(self, args, env_configs):
         """
         Parameters
@@ -131,13 +138,6 @@ class Ecflowsetup:
             self.env_configs['base']['scriptrepo'] = f"{self.ecfhome}/scripts"
         self.scriptrepo = self.env_configs['base']['scriptrepo']
 
-        # Setup the default edits from the environment
-        self.environment_edits = [
-            'ACCOUNT',
-            'queue',
-            'machine',
-            'RUN_ENVIR',
-        ]
 
     def generate_workflow(self):
         """
@@ -160,43 +160,7 @@ class Ecflowsetup:
         None
         """
 
-        def get_suite_names(suitename):
-            """
-            In the event that the suite uses a list definition [X,Y,Z...], this
-            method will generate an array of the properly formatted names.
-
-            This is internal to the generate_workflow method and is only called
-            from within. The names are split out using regex if it is a list.
-
-            Parameters
-            ----------
-            suitename : str
-                A string representation of the
-
-            Returns
-            -------
-            array
-                If not a list, returns an array with the suitename paraemeter as
-                the only object. If it is a list, return all the names.
-            """
-
-            # Check to see if the name actually has a list, if not return an
-            # array with just the suite name as object in place 0.
-            if not re.search(r".*\[.*\].*", suitename):
-                return [f"{suitename}"]
-
-            # If the name does have a list, break apart the prefix and suffix
-            # from the list and then run it through a for loop to get all
-            # possible values.
-            name_token = re.search("(.*)\[(.*)\](.*)", suitename)
-            assert name_token != None
-            base = name_token.group(1).strip()
-            list_items = name_token.group(2).strip().split(',')
-            suffix = name_token.group(3).strip()
-            name_array = []
-            for item in list_items:
-                name_array.append(f"{base}{item}{suffix}")
-            return name_array
+        
 
         # Add in extern headers
         self.process_definition_header()
@@ -248,12 +212,11 @@ class Ecflowsetup:
         None
         """
 
-        print("Saving definition File")
-        savedir = self.args.savedir
-        defs_file = f"{savedir}/ecflow_suite.def"
+        log.info("Saving definition File")
+        defs_file = f"{self.args.savedir}/ecflow_suite.def"
         self.DEFS.save_as_defs(defs_file)
 
-    def add_environment_edits(self, suite):
+    def add_environment_edits(self, suite: Suite):
         """
         The suite is passed in and the edits from the environment are added. The
         environment edits are defined in the init method.
@@ -286,7 +249,7 @@ class Ecflowsetup:
                 edit_dict = {edit: self.env_configs['base'][edit.lower()]}
             suite.add_edit(edit_dict)
 
-    def check_dict(self, node, key, key_is_dict=True):
+    def check_dict(self, node: Node, key, key_is_dict=True):
         """
         This function checks for the presence of they key inside of the node.
         Used to identify it various addons need to be added into the suite.
@@ -630,6 +593,27 @@ def find_env_param(node, value, envconfig):
         new_node = f"{search_key.group(1)} {new_variable} {search_key.group(3)}"
     return new_node
 
+def _find_env_param(node, value, envconfig):
+
+    if value not in node:
+        return node
+    
+    variable_lookup = re.search(f".*{value}([\dA-Za-z_]*)", node).group(1).strip()
+    if variable_lookup in os.environ:
+        if isinstance(os.environ[variable_lookup], datetime.datetime):
+            new_variable = os.environ[variable_lookup].strftime("%Y%m%d%H")
+        else:
+            new_variable = os.environ[variable_lookup]
+    else:
+        if isinstance(envconfig['base'][variable_lookup],
+                        datetime.datetime):
+            new_variable = envconfig['base'][variable_lookup].strftime("%Y%m%d%H")
+        else:
+            new_variable = envconfig['base'][variable_lookup]
+    search_key = re.search(r"(.*)(env\.[\dA-Za-z_]*)(.*)", node)
+    new_node = f"{search_key.group(1)} {new_variable} {search_key.group(3)}"
+    return new_node
+
 
 def update_ecflow_config(configfile, envconfig):
     """
@@ -650,44 +634,84 @@ def update_ecflow_config(configfile, envconfig):
     config : dict
         The updated configuration with the environment variables replaced.
     """
-
-    def runupdate(nested_dict, value):
-        """
-        To scan through the entire nested dictionary the run update was an easy
-        local function to use to provide recursion given that the parent
-        function did not work properly when trying to use a recursive call.
-
-        Parameters
-        ----------
-        nested_dict : dict
-            The nested dictionary to scan and replace the values.
-        value : str
-            The string to search for the replacement, currently set to env.
-
-        Returns
-        -------
-        nested_dict : dict
-            The updated dictionary with all of the values replaced as necessary.
-        """
-        for k, v in nested_dict.items():
-            if isinstance(v, str) and value in v:
-                lookup = v.split('.')
-                variable_lookup = re.findall("[\dA-Za-z_]*", lookup[1])[0]
-                if variable_lookup in os.environ:
-                    if isinstance(os.environ[variable_lookup], datetime.datetime):
-                        nested_dict[k] = os.environ[variable_lookup].strftime("%Y%m%d%H")
-                    else:
-                        nested_dict[k] = os.environ[variable_lookup]
-
-                else:
-                    if isinstance(envconfig['base'][variable_lookup], datetime.datetime):
-                        envvalue = envconfig['base'][variable_lookup].strftime("%Y%m%d%H")
-                    else:
-                        envvalue = envconfig['base'][variable_lookup]
-                    nested_dict[k] = envvalue
-            elif isinstance(v, collections.abc.Mapping):
-                nested_dict[k] = runupdate(v, value)
-        return nested_dict
-
-    config = runupdate(configfile, 'env.')
+    config = runupdate(configfile, 'env.', envconfig)
     return config
+
+def runupdate(nested_dict, value, envconfig):
+    """
+    To scan through the entire nested dictionary the run update was an easy
+    local function to use to provide recursion given that the parent
+    function did not work properly when trying to use a recursive call.
+
+    Parameters
+    ----------
+    nested_dict : dict
+        The nested dictionary to scan and replace the values.
+    value : str
+        The string to search for the replacement, currently set to env.
+
+    Returns
+    -------
+    nested_dict : dict
+        The updated dictionary with all of the values replaced as necessary.
+    """
+    for k, v in nested_dict.items():
+        if isinstance(v, str) and value in v:
+            lookup = v.split('.')
+            variable_lookup = re.findall("[\dA-Za-z_]*", lookup[1])[0]
+            if variable_lookup in os.environ:
+                if isinstance(os.environ[variable_lookup], datetime.datetime):
+                    nested_dict[k] = os.environ[variable_lookup].strftime("%Y%m%d%H")
+                else:
+                    nested_dict[k] = os.environ[variable_lookup]
+
+            else:
+                if isinstance(envconfig['base'][variable_lookup], datetime.datetime):
+                    envvalue = envconfig['base'][variable_lookup].strftime("%Y%m%d%H")
+                else:
+                    envvalue = envconfig['base'][variable_lookup]
+                nested_dict[k] = envvalue
+        elif isinstance(v, collections.abc.Mapping):
+            nested_dict[k] = runupdate(v, value)
+    return nested_dict
+
+
+
+
+def get_suite_names(suitename):
+            """
+            In the event that the suite uses a list definition [X,Y,Z...], this
+            method will generate an array of the properly formatted names.
+
+            This is internal to the generate_workflow method and is only called
+            from within. The names are split out using regex if it is a list.
+
+            Parameters
+            ----------
+            suitename : str
+                A string representation of the
+
+            Returns
+            -------
+            array
+                If not a list, returns an array with the suitename paraemeter as
+                the only object. If it is a list, return all the names.
+            """
+
+            # Check to see if the name actually has a list, if not return an
+            # array with just the suite name as object in place 0.
+            if not re.search(r".*\[.*\].*", suitename):
+                return [f"{suitename}"]
+
+            # If the name does have a list, break apart the prefix and suffix
+            # from the list and then run it through a for loop to get all
+            # possible values.
+            name_token = re.search("(.*)\[(.*)\](.*)", suitename)
+            assert name_token != None
+            base = name_token.group(1).strip()
+            list_items = name_token.group(2).strip().split(',')
+            suffix = name_token.group(3).strip()
+            name_array = []
+            for item in list_items:
+                name_array.append(f"{base}{item}{suffix}")
+            return name_array

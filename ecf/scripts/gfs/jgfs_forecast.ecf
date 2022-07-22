@@ -8,6 +8,8 @@
 #PBS -l place=vscatter:exclhost
 #PBS -l debug=true
 
+
+
 model=gfs
 %include <head.h>
 %include <envir-p1.h>
