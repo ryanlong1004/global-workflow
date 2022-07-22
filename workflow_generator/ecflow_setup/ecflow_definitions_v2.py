@@ -9,12 +9,13 @@ import os
 import shutil
 from typing import List, Union
 from abc import ABC
+from itertools import chain
 
 
 class Node(ABC):
     """represents any leaf of the ecf tree"""
 
-    def __init__(self, name: str, parent: "Node"):
+    def __init__(self, name: str, parent: Union[None, "Node"]):
         if name == "__ROOT__":
             raise ValueError("__ROOT__ node already exists.")
         self.name = name
@@ -23,8 +24,18 @@ class Node(ABC):
         self.manuals = []
         self.edits = []
 
+        if parent:
+            parent.add_child(self)
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} {self.name}/>"
+
+    def __str__(self) -> str:
+        parent_name = "None" if self.parent is None else self.parent.name
+        return f"<{self.__class__.__name__} name='{self.name}' parent='{parent_name}' children=[{len(self.children)}]>"
+
+    def __iter__(self):
+        return iter(self.children)
 
     def add_manual(self, text: Union[List[str], str]):
         """
@@ -51,34 +62,23 @@ class Node(ABC):
         self.parent = node
         node.add_child(self)
 
-    def root_node(self):
-        """returns the starting node/root"""
-        return Node("__ROOT__", self)
-
-
-class Trigger:
-    """
-    Where possible you should give preference to triggers on the definitions, since these are checked on creation, whereas embedded triggers are checked at run time.
-
-    Embeded triggers?
-    https://confluence.ecmwf.int/display/ECFLOW/Embedded+Triggers
-    """
-
 
 class Suite(Node):
     """collection of families"""
 
     def add_family(self, family: "Family"):
         """add family to suite"""
+        family.parent = self
         self.add_child(family)
 
-    def add_task(self, task: "Task"):
-        """add task to suite"""
-        self.add_child(task)
+    def add_task(self, _task: "Task"):
+        """adds a task to the suite"""
+        print("Here")
+        _task.parent = self
+        self.add_child(_task)
 
     def define_limit(self):
         """https://confluence.ecmwf.int/display/ECFLOW/Limits"""
-        pass
 
 
 class Family(Node):
@@ -93,10 +93,12 @@ class Family(Node):
 
     def add_family(self, family: "Family"):
         """add a family"""
+        family.parent = self
         self.add_child(family)
 
     def add_task(self, task: "Task"):
         """add a task"""
+        task.parent = self
         self.add_child(task)
 
     def use_limit(self):
@@ -107,8 +109,8 @@ class Family(Node):
 class Task(Node):
     """represents task"""
 
-    def __init__(self, name: str, parent: Node):
-        self.trigger: Union[Trigger, None] = None
+    def __init__(self, name: str, parent: Union[Node, None]):
+        self.trigger: Union["Trigger", None] = None
         super().__init__(name, parent)
 
     def add_cron(self):
@@ -136,6 +138,15 @@ class Task(Node):
     def add_event(self, event: "Event"):
         """add event to the Task"""
         raise NotImplementedError
+
+
+class Trigger:
+    """
+    Where possible you should give preference to triggers on the definitions, since these are checked on creation, whereas embedded triggers are checked at run time.
+
+    Embeded triggers?
+    https://confluence.ecmwf.int/display/ECFLOW/Embedded+Triggers
+    """
 
 
 class Event:
@@ -232,3 +243,24 @@ def generate_ecflow_task(ecfhome, suite, parents, name, template, scriptrepo):
             ecfscript = os.path.join(root, search_script)
     if ecfscript is not None:
         shutil.copyfile(ecfscript, script_path, follow_symlinks=True)
+
+
+if __name__ == "__main__":
+    suite = Suite("root_suite", None)
+    family = Family("first family", suite)
+    task = Task("my_task", suite)
+    task2 = Task("my 2nd task", suite)
+
+    def _unwind(root, accum):
+        for x in root:
+            accum.append(x)
+            if len(x.children) >= 0:
+                accum.append(_unwind(x.children, accum))
+        return accum
+
+    print(_unwind(suite, []))
+
+# level_1_child_1 = Node(34, parent=root)
+# level_1_child_2 = Node(89, parent=root)
+# level_2_child_1 = Node(45, parent=level_1_child_1)
+# level_2_child_2 = Node(50, parent=level_1_child_2)
