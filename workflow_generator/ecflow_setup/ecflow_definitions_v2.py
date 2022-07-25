@@ -75,8 +75,7 @@ class Node(ABC):
 
     def traverse_up(self, accum=None):
         """returns recursive list of parent nodes"""
-        if accum is None:
-            accum = []
+        accum = [] if accum is None else accum
         accum.append(self)
         if self.parent is not None:
             self.parent.traverse_up(accum)
@@ -84,8 +83,7 @@ class Node(ABC):
 
     def traverse_down(self, accum=None):
         """returns recursive list of child nodes"""
-        if accum is None:
-            accum = []
+        accum = [] if accum is None else accum
         accum.append(self)
         for child in self.children:
             child.traverse_down(accum)
