@@ -89,6 +89,11 @@ class Node(ABC):
             child.traverse_down(accum)
         return accum
 
+    @property
+    def root(self):
+        """returns the root node regardless of caller"""
+        return self.traverse_up()[-1]
+
 
 class Suite(Node):
     """collection of families"""
