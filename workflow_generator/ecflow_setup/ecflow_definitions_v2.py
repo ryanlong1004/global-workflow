@@ -15,8 +15,6 @@ class Node(ABC):
     """represents any leaf of the ecf tree"""
 
     def __init__(self, name: str, parent: Union[None, "Node"] = None):
-        if name == "__ROOT__":
-            raise ValueError("__ROOT__ node already exists.")
         self.name = name
         self.parent = parent
         self.children = []
@@ -96,7 +94,7 @@ class Node(ABC):
 
 
 class Suite(Node):
-    """collection of families"""
+    """represents a Suite"""
 
     def add_family(self, family: "Family"):
         """add family to suite"""
@@ -113,7 +111,7 @@ class Suite(Node):
 
 
 class Family(Node):
-    """Collection of other families and tasks"""
+    """represents a Family"""
 
     def add_repeat(self, repeat):
         """https://confluence.ecmwf.int/display/ECFLOW/Repeat"""
@@ -138,7 +136,7 @@ class Family(Node):
 
 
 class Task(Node):
-    """represents task"""
+    """represents Task"""
 
     def __init__(self, name: str, parent: Union[Node, None]):
         self.trigger: Union[str, None] = None

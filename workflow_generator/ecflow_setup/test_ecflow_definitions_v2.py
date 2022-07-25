@@ -17,14 +17,6 @@ def _setup():
     task4.add_manual(["so it this", "this too"])
     task4.add_edit("abcd = efgh")
 
-    print(task4.manuals)
-    print(task4.edits)
-    print(task4.traverse_up())
-    print(task4.traverse_down())
-    print(suite.traverse_down())
-    print(suite.local_path)
-    print(task4.local_path)
-
 
 def test_suite():
     """tests the Suite class"""
@@ -72,3 +64,11 @@ def test_task():
     assert len(task.children) == 0
     assert len(task.traverse_down()) == 1
     assert len(task.traverse_up()) == 3
+
+    assert task.local_path == "root_suite/first family/my_task"
+
+    assert task2.local_path == "my_task2"
+    suite.add_task(task2)
+    assert task2.local_path == "root_suite/my_task2"
+
+    assert task2.root.name == "root_suite"
