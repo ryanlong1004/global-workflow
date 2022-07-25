@@ -9,7 +9,6 @@ import os
 import shutil
 from typing import List, Union
 from abc import ABC
-from itertools import chain
 
 
 class Node(ABC):
@@ -27,10 +26,10 @@ class Node(ABC):
         if parent:
             parent.add_child(self)
 
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__} {self.name}/>"
-
     def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
         parent_name = "None" if self.parent is None else self.parent.name
         return f"<{self.__class__.__name__} name='{self.name}' parent='{parent_name}' children=[{len(self.children)}]>"
 
@@ -68,6 +67,32 @@ class Node(ABC):
         """assign a new parent node"""
         self.parent = node
         node.add_child(self)
+
+    @property
+    def local_path(self) -> str:
+        """returns a \ delimited string of paths based off of node names"""
+        return "\\".join(reversed(list([str(x) for x in self.traverse_up()])))
+
+    def traverse_up(self, accum=None):
+        """returns recursive list of parent nodes"""
+        if accum is None:
+            accum = []
+        accum.append(self)
+        if self.parent is not None:
+            self.parent.traverse_up(accum)
+        return accum
+
+    def traverse_down(self, accum=None):
+        """returns recursive list of child nodes"""
+        if accum is None:
+            accum = []
+        accum.append(self)
+        for node in self.children:
+            accum.append(node)
+            for child in node.children:
+                accum.append(child)
+                child.traverse_down(accum)
+        return accum
 
 
 class Suite(Node):
@@ -116,7 +141,7 @@ class Task(Node):
     """represents task"""
 
     def __init__(self, name: str, parent: Union[Node, None]):
-        self.trigger: Union["Trigger", None] = None
+        self.trigger: Union[str, None] = None
         super().__init__(name, parent)
 
     def add_cron(self):
@@ -135,11 +160,11 @@ class Task(Node):
         """https://confluence.ecmwf.int/display/ECFLOW/Repeat"""
         raise NotImplementedError
 
-    def add_trigger(self, trigger: "Trigger"):
+    def add_trigger(self, trigger: str):
         """sets the Task trigger"""
         if self.trigger is not None:
             raise ValueError(f"trigger already defined. [{self.name}]-> {self.trigger}")
-        self.trigger = trigger
+        self.trigger = f"trigger {trigger}"
 
     def add_event(self, event: "Event"):
         """add event to the Task"""
@@ -265,19 +290,13 @@ if __name__ == "__main__":
     task4.add_manual(["so it this", "this too"])
     task4.add_edit("abcd = efgh")
 
-    def _unwind(root_node, accum):
-        if len(accum) == 0:
-            accum.append(root_node)
-        for node in root_node:
-            accum.append(node)
-            for child in node.children:
-                accum.append(child)
-                _unwind(child.children, accum)
-        return accum
-
     print(task4.manuals)
     print(task4.edits)
-    print(_unwind(suite, []))
+    print(task4.traverse_up())
+    print(task4.traverse_down())
+    print(suite.traverse_down())
+    print(suite.local_path)
+    print(task4.local_path)
 
 # level_1_child_1 = Node(34, parent=root)
 # level_1_child_2 = Node(89, parent=root)
