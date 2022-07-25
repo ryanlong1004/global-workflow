@@ -34,7 +34,7 @@ class Node(ABC):
         return f"<{self.__class__.__name__} name='{self.name}' parent='{parent_name}' children=[{len(self.children)}]>"
 
     def __iter__(self):
-        return iter(self.children)
+        return iter(self.traverse_down())
 
     def add_manual(self, text: Union[List[str], str]):
         """
