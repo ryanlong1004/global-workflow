@@ -87,11 +87,8 @@ class Node(ABC):
         if accum is None:
             accum = []
         accum.append(self)
-        for node in self.children:
-            accum.append(node)
-            for child in node.children:
-                accum.append(child)
-                child.traverse_down(accum)
+        for child in self.children:
+            child.traverse_down(accum)
         return accum
 
 
