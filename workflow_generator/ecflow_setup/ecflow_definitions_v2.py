@@ -70,8 +70,8 @@ class Node(ABC):
 
     @property
     def local_path(self) -> str:
-        """returns a \ delimited string of paths based off of node names"""
-        return "\\".join(reversed(list([str(x) for x in self.traverse_up()])))
+        """returns a / delimited string of paths based off of node names"""
+        return "/".join(reversed(list([str(x) for x in self.traverse_up()])))
 
     def traverse_up(self, accum=None):
         """returns recursive list of parent nodes"""
