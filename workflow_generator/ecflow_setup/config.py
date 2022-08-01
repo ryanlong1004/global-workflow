@@ -1,4 +1,5 @@
 
+from ast import Str
 from typing import Any, Dict
 from functools import lru_cache
 import os
@@ -24,6 +25,11 @@ class Config:
 
     def __add__(self, other_config):
         return Config({**self._data, **other_config})
+
+    @property
+    def suites(self):
+        """returns top level suites"""
+        return [Node(suite, config['suites'][suite], None) for suite in config['suites']]
     
     @staticmethod
     def from_yaml(file_path: pathlib.Path) -> "Config":
@@ -47,13 +53,14 @@ def add_externs(ecfconf, DEFS):
 
 class Node:
 
-    def __init__(self, name, data, type = None):
+    def __init__(self, name, data, parent):
         self.name = name
+        self.parent = parent
         self._data = data
-        self._type = type
+        self._type = ""
 
     def __str__(self):
-        return f"<{self.type.capitalize()} {[self.name]}/>"
+        return f"<{self.type.capitalize()} {[self.name]} {['None' if self.parent is None else self.parent.name]}/>"
 
     def __repr__(self):
         return str(self)
@@ -75,36 +82,56 @@ class Node:
     def children(self):
         """returns children"""
         try:
-            return [Node(k,v) for (k, v) in self._data.items()]
+            return [Node(k,v, self) for (k, v) in self._data.items()]
         except AttributeError:
             return []
 
     @property
-    def type(self):
-        if self._type is None:
+    def type(self) -> str:
+        """returns the type of Node"""
+        if self._type == "":
             self._type = "family"
+            if self.parent is None:
+                self._type = 'suite'
             if self.name.lower() in KEYWORDS:
                 self._type = self.name
             if len(self.children) < 1:
                 self._type = "node"
         return self._type
 
+    @property
+    def local_path(self) -> str:
+        """returns a / delimited string of paths based off of node names"""
+        return "/".join(reversed(list([str(x) for x in self.traverse_up()])))
 
-def get_suites(config: Config):
-    return [Node(suite, config['suites'][suite], 'suite') for suite in config['suites']]
+    def traverse_up(self, accum=None):
+        """returns recursive list of parent nodes"""
+        accum = [] if accum is None else accum
+        accum.append(self)
+        if self.parent is not None:
+            self.parent.traverse_up(accum)
+        return accum
+
+    def traverse_down(self, accum=None):
+        """returns recursive list of child nodes"""
+        accum = [] if accum is None else accum
+        accum.append(self)
+        for child in self.children:
+            child.traverse_down(accum)
+        return accum
+
+    @property
+    def root(self):
+        """returns the root node regardless of caller"""
+        return self.traverse_up()[-1]
 
 if __name__ == "__main__":
     config = Config.from_yaml(pathlib.Path("../prod.yml"))
     config = config + {}
-    for suite in get_suites(config):
-        print(suite)
-        print(suite._type)
-        for node in suite.children:
-            print(node)
-            print(node._type)
-            for _node in node:
-                print(_node)
-                print(_node.type)
+    for suite in config.suites:
+        for x in suite.traverse_down():
+            print(x)
+        
         # if "nodes" in config["suites"][suite]:
         #     for node in config["suites"][suite]["nodes"]:
         #         print(node)
