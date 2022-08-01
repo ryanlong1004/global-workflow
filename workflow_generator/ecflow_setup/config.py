@@ -1,6 +1,6 @@
 
 from ast import Str
-from typing import Any, Dict
+from typing import Any, Dict, List
 from functools import lru_cache
 import os
 import pathlib
@@ -102,9 +102,9 @@ class Node:
     @property
     def local_path(self) -> str:
         """returns a / delimited string of paths based off of node names"""
-        return "/".join(reversed(list([str(x) for x in self.traverse_up()])))
+        return "/".join(reversed(list([x.name for x in self.traverse_up()])))
 
-    def traverse_up(self, accum=None):
+    def traverse_up(self, accum=None) -> List['Node']:
         """returns recursive list of parent nodes"""
         accum = [] if accum is None else accum
         accum.append(self)
@@ -112,7 +112,7 @@ class Node:
             self.parent.traverse_up(accum)
         return accum
 
-    def traverse_down(self, accum=None):
+    def traverse_down(self, accum=None) -> List['Node']:
         """returns recursive list of child nodes"""
         accum = [] if accum is None else accum
         accum.append(self)
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     config = config + {}
     for suite in config.suites:
         for x in suite.traverse_down():
-            print(x)
+            print(x.local_path)
         
         # if "nodes" in config["suites"][suite]:
         #     for node in config["suites"][suite]["nodes"]:
