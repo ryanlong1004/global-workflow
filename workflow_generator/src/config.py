@@ -1,27 +1,27 @@
-
-from ast import Str
+import logging
 from typing import Any, Dict, List
-from functools import lru_cache
 import os
 import pathlib
 import yaml
 
-KEYWORDS = ['tasks', 'edits', 'nodes','triggers', 'events']
+log = logging.getLogger(__name__)
 
+KEYWORDS = ["tasks", "edits", "nodes", "triggers", "events"]
+DEFAULT_ENCODING = "utf-8"
 ENV_TOKEN = "env."
+
 
 class Config:
     """represents a yaml configuartion"""
-    
+
     def __init__(self, data: Dict[Any, Any]):
         self._data = data
-    
+
     def __getattr__(self, item: str):
         return self[item]
 
     def __getitem__(self, key: str):
         return self._data[key]
-        # return get_environment_value(self._data[key])
 
     def __add__(self, other_config):
         return Config({**self._data, **other_config})
@@ -29,34 +29,57 @@ class Config:
     @property
     def suites(self):
         """returns top level suites"""
-        return [Node(suite, config['suites'][suite], None) for suite in config['suites']]
-    
+        return [
+            Node(suite, config["suites"][suite], None) for suite in config["suites"]
+        ]
+
     @staticmethod
     def from_yaml(file_path: pathlib.Path) -> "Config":
         """instantiate Config with yaml file"""
-        with open(file_path, "r", encoding="utf-8") as _file:
+        with open(file_path, "r", encoding=DEFAULT_ENCODING) as _file:
             return Config(yaml.safe_load(_file))
 
-    
-@lru_cache()
-def get_environment_value(key, token=ENV_TOKEN) -> Any:
+
+def get_environment_value(value, indicator_token=ENV_TOKEN) -> Any:
     """returns env value if it exists"""
-    if token not in key:
-        return key
-    return os.environ[key.split(".", 1)[1]]
+    if value is None or indicator_token not in value:
+        return value
+    try:
+        return os.environ[value.split(".", 1)[1]]
+    except KeyError:
+        log.warning("environment variable not found: [%s]", value)
+
+def sub_env_values(data: Dict[Any, Any]):
+    """replaces all dict values with env variables if indicated"""
     
+    #TODO why is "None" getting through here?
+    if data is None:
+        return data
+
+    if isinstance(data, str):
+        return get_environment_value(data)
+
+    for item in data.keys():
+        if item is not None:
+            data[item] = get_environment_value(data[item])
+        
+    return data
+
+
 
 def add_externs(ecfconf, DEFS):
-    if 'externs' in ecfconf.keys():
-            for extern in ecfconf['externs']:
-                DEFS.add_extern(extern)
+    """TODO"""
+    if "externs" in ecfconf.keys():
+        for extern in ecfconf["externs"]:
+            DEFS.add_extern(extern)
+
 
 class Node:
-
+    """encapsulates every type of Node"""
     def __init__(self, name, data, parent):
         self.name = name
         self.parent = parent
-        self._data = data
+        self._data = sub_env_values(data)
         self._type = ""
 
     def __str__(self):
@@ -68,21 +91,31 @@ class Node:
     def __iter__(self):
         return iter(self.children)
 
-    @property 
+    @property
     def edits(self):
-        """returns node edits"""
-        return [] if 'edits' not in self._data else self._data['edits']
-    
-    @property 
+        """returns edits"""
+        return [] if "edits" not in self._data else self._data["edits"]
+
+    @property
     def nodes(self):
-        """returns node edits"""
-        return [] if 'nodes' not in self._data else self._data['nodes']
-        
+        """returns nodes"""
+        return [] if "nodes" not in self._data else self._data["nodes"]
+
+    @property
+    def triggers(self):
+        """returns triggers"""
+        return [] if "nodes" not in self._data else self._data["triggers"]
+
+    @property
+    def tasks(self):
+        """returns tasks"""
+        return [] if "nodes" not in self._data else self._data["tasks"]
+
     @property
     def children(self):
         """returns children"""
         try:
-            return [Node(k,v, self) for (k, v) in self._data.items()]
+            return [Node(k, v, self) for (k, v) in self._data.items()]
         except AttributeError:
             return []
 
@@ -92,7 +125,7 @@ class Node:
         if self._type == "":
             self._type = "family"
             if self.parent is None:
-                self._type = 'suite'
+                self._type = "suite"
             if self.name.lower() in KEYWORDS:
                 self._type = self.name
             if len(self.children) < 1:
@@ -104,7 +137,7 @@ class Node:
         """returns a / delimited string of paths based off of node names"""
         return "/".join(reversed(list([x.name for x in self.traverse_up()])))
 
-    def traverse_up(self, accum=None) -> List['Node']:
+    def traverse_up(self, accum=None) -> List["Node"]:
         """returns recursive list of parent nodes"""
         accum = [] if accum is None else accum
         accum.append(self)
@@ -112,7 +145,7 @@ class Node:
             self.parent.traverse_up(accum)
         return accum
 
-    def traverse_down(self, accum=None) -> List['Node']:
+    def traverse_down(self, accum=None) -> List["Node"]:
         """returns recursive list of child nodes"""
         accum = [] if accum is None else accum
         accum.append(self)
@@ -125,23 +158,25 @@ class Node:
         """returns the root node regardless of caller"""
         return self.traverse_up()[-1]
 
+
 if __name__ == "__main__":
-    config = Config.from_yaml(pathlib.Path("../prod.yml"))
+    config = Config.from_yaml(pathlib.Path("../ecflow_build.yml"))
     config = config + {}
     for suite in config.suites:
-        for x in suite.traverse_down():
-            print(x.local_path)
-        
+        for node in suite.traverse_down():
+            print(node)
+            if node.type == 'node':
+                print(node._data)
+        print("*" * 8)
+
         # if "nodes" in config["suites"][suite]:
         #     for node in config["suites"][suite]["nodes"]:
         #         print(node)
-                # print(node)
-                # s.add_edit(f"{edit} {config['suites'][suite]['edits'][edit]}")
+        # print(node)
+        # s.add_edit(f"{edit} {config['suites'][suite]['edits'][edit]}")
     # print(root.traverse_down())
     # for x in root:
     #     print(x.edits)
-        
-
 
 
 """

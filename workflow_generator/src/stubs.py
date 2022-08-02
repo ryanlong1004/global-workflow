@@ -1,5 +1,5 @@
 class Root(object):  # from where Suite and Node derive
-    """ generic tree node """
+    """generic tree node"""
 
     def __init__(self):
         self.load = None  # to be filled with ecFlow item
@@ -65,32 +65,30 @@ class Root(object):  # from where Suite and Node derive
         return self.fullname()
 
     def fullname(self):
-        """ simple syntax """
+        """simple syntax"""
         pass
 
-    def repeat(self, name="YMD", start=20120101, end=20321212, step=1,
-               kind="date"):
-        """ add repeat attribute"""
+    def repeat(self, name="YMD", start=20120101, end=20321212, step=1, kind="date"):
+        """add repeat attribute"""
         pass
-
 
     def __add__(self, item):
         self.add(item)
 
     def append(self, item=None, *args):
-        """ we get compatible with list then """
+        """we get compatible with list then"""
         return self.add(item, args)
 
     def add(self, item=None, *args):
-        """ add a task, a family or an attribute """
+        """add a task, a family or an attribute"""
         return self
 
     def limit(self, name=None, size=1, inlimit=0):
-        """ add limit attribute"""
+        """add limit attribute"""
         return self
 
     def inlimit(self, full_path):
-        """ add inlimit attribute"""
+        """add inlimit attribute"""
         return self
 
     # follow pyflow
@@ -115,8 +113,9 @@ class Root(object):  # from where Suite and Node derive
     def _repr_html_(self):
         return str(self.to_html())
 
+
 class Node(Root):  # from where Task and Family derive
-    """ Node class is shared by family and task """
+    """Node class is shared by family and task"""
 
     def __enter__(self):
         return self
@@ -136,6 +135,7 @@ class Node(Root):  # from where Task and Family derive
         if self.load:
             return self.load.find_variable(name)
         return None
+
     # def event(self, name=1):
     #     """ add event attribute"""
     #     if USE_EVENT:
@@ -160,26 +160,26 @@ class Node(Root):  # from where Task and Family derive
     #     return self
 
     def variable(self, name, value=""):
-        """ add variable attribute """
+        """add variable attribute"""
 
     def cron(self, time, dom=False, wdays=False, month=False):
-        """ wrapper for add_cron """
+        """wrapper for add_cron"""
 
     def complete(self, arg):
-        """ add complete attribute"""
+        """add complete attribute"""
 
     def complete_and(self, arg):
-        """ append to existing complete"""
+        """append to existing complete"""
 
     def complete_or(self, arg):
-        """ append to existing complete"""
-    
+        """append to existing complete"""
 
     def up(self):
-        """ get parent, one level up"""
+        """get parent, one level up"""
+
 
 class Defs(object):
-    """ wrapper for the definition """
+    """wrapper for the definition"""
 
     def __init__(self):
         self.load = []
@@ -227,7 +227,7 @@ class Defs(object):
         self.add(item)
 
     def append(self, item=None, *args):
-        """ get compatible with list """
+        """get compatible with list"""
         pass
 
     def add(self, item):
@@ -240,13 +240,14 @@ class Defs(object):
         pass
 
     def suite(self, name):
-        """ add suite providing its name """
+        """add suite providing its name"""
         suite = Suite(name)
         self.add(suite)
         return suite
 
+
 class Client(object):
-    """ wrapper around client """
+    """wrapper around client"""
 
     def __init__(self, host="localhost", port="31415"):
         self.host = host
@@ -263,12 +264,16 @@ class Client(object):
 
     def suites(self):
         pass
+
     def begin_suite(self, name):
         pass
+
     def resume(self, path):
         pass
+
     def suspend(self, path):
         pass
+
     def ping(self):
         pass
 
@@ -280,7 +285,7 @@ class Client(object):
 
 
 class Suite(Root):
-    """ wrapper for a suite """
+    """wrapper for a suite"""
 
     def __enter__(self):
         return self
@@ -295,11 +300,11 @@ class Suite(Root):
         pass
 
     def family(self, name):
-        """ add a family """
+        """add a family"""
         pass
 
     def task(self, name):
-        """ add a task """
+        """add a task"""
         pass
 
     def add_to(self, defs):
@@ -311,17 +316,17 @@ class Suite(Root):
 
 
 class Family(Node):
-    """ wrapper around family """
+    """wrapper around family"""
 
     def __init__(self, name):
-       pass
+        pass
 
     def family(self, name):
-        """ add a family """
+        """add a family"""
         pass
 
     def task(self, name):
-        """ add a task """
+        """add a task"""
         pass
 
     def add_to(self, node):
@@ -336,7 +341,7 @@ class Family(Node):
 
 
 class Task(Node):
-    """ wrapper around task """
+    """wrapper around task"""
 
     def __init__(self, name):
         pass
@@ -352,7 +357,6 @@ class Task(Node):
 
 
 class Alias(Root):  # from where Suite and Node derive
-
     def __get_attr__(self, attr):
         return None
 
