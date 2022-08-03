@@ -116,6 +116,9 @@ class Node:
                 pass
         return self._ecf_instance
 
+    def __getattribute__(self, item):
+        return getattr(self.ecf_instance, item)
+
     def __str__(self):
         return f"<{self.type.capitalize()} {[self.name]} {['None' if self.parent is None else self.parent.name]}/>"
 
