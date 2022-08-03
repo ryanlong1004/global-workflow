@@ -1,8 +1,14 @@
+"""
+Abstracts the configuration and environment from ECF
+"""
+
 import logging
+from collections.abc import Mapping
 from typing import Any, Dict, List
 import os
 import pathlib
 import yaml
+import stubs
 
 log = logging.getLogger(__name__)
 
@@ -47,40 +53,68 @@ def get_environment_value(value, indicator_token=ENV_TOKEN) -> Any:
     try:
         return os.environ[value.split(".", 1)[1]]
     except KeyError:
-        log.warning("environment variable not found: [%s]", value)
+        pass  # TODO remove
+        # log.warning("environment variable not found: [%s]", value.split(".", 1)[1])
+    return value
+
 
 def sub_env_values(data: Dict[Any, Any]):
     """replaces all dict values with env variables if indicated"""
-    
-    #TODO why is "None" getting through here?
     if data is None:
         return data
 
-    if isinstance(data, str):
+    if not isinstance(data, Mapping):
         return get_environment_value(data)
 
     for item in data.keys():
-        if item is not None:
-            data[item] = get_environment_value(data[item])
-        
+        data[item] = get_environment_value(data[item])
+
     return data
 
 
+def get_home(env_configs) -> pathlib.Path:
+    """returns ECF gfs home?"""
+    return pathlib.Path(env_configs["base"]["ECFgfs"])
 
-def add_externs(ecfconf, DEFS):
+
+def get_script_repo(env_configs):
+    """returns script repo path from config or default"""
+    return (
+        pathlib.Path(get_home(env_configs) / "scripts")
+        if "scriptrepo" not in env_configs
+        else env_configs["scriptrepo"]
+    )
+
+
+def add_externs(env_configs, DEFS):
     """TODO"""
-    if "externs" in ecfconf.keys():
-        for extern in ecfconf["externs"]:
+    if "externs" in env_configs:
+        for extern in env_configs["externs"]:
             DEFS.add_extern(extern)
 
 
 class Node:
     """encapsulates every type of Node"""
+
     def __init__(self, name, data, parent):
         self.name = name
         self.parent = parent
         self._data = sub_env_values(data)
         self._type = ""
+        self._ecf_instance = None
+
+    @property
+    def ecf_instance(self):
+        """returns the ecf class equivalent based on type"""
+        if self._ecf_instance is None:
+            try:
+                clz = getattr(stubs, self.type.capitalize())
+                self._ecf_instance = clz(self.name)
+            except AttributeError:
+                pass
+            except TypeError:
+                pass
+        return self._ecf_instance
 
     def __str__(self):
         return f"<{self.type.capitalize()} {[self.name]} {['None' if self.parent is None else self.parent.name]}/>"
@@ -135,7 +169,16 @@ class Node:
     @property
     def local_path(self) -> str:
         """returns a / delimited string of paths based off of node names"""
-        return "/".join(reversed(list([x.name for x in self.traverse_up()])))
+
+        return "/".join(
+            reversed(
+                [
+                    x.name
+                    for x in self.traverse_up()
+                    if x.type.lower() not in KEYWORDS and x.type.lower() not in ["node"]
+                ]
+            )
+        )
 
     def traverse_up(self, accum=None) -> List["Node"]:
         """returns recursive list of parent nodes"""
@@ -160,26 +203,31 @@ class Node:
 
 
 if __name__ == "__main__":
+    root = pathlib.Path(".")
     config = Config.from_yaml(pathlib.Path("../ecflow_build.yml"))
     config = config + {}
     for suite in config.suites:
         for node in suite.traverse_down():
             print(node)
-            if node.type == 'node':
-                print(node._data)
-        print("*" * 8)
+            # print(node.ecf_instance)
+            # print(pathlib.Path(root / node.local_path)) #1
+            print(type(node.ecf_instance))
+    #         print(node._data)
+    # print("*" * 8)
 
-        # if "nodes" in config["suites"][suite]:
-        #     for node in config["suites"][suite]["nodes"]:
-        #         print(node)
-        # print(node)
-        # s.add_edit(f"{edit} {config['suites'][suite]['edits'][edit]}")
+    # if "nodes" in config["suites"][suite]:
+    #     for node in config["suites"][suite]["nodes"]:
+    #         print(node)
+    # print(node)
+    # s.add_edit(f"{edit} {config['suites'][suite]['edits'][edit]}")
     # print(root.traverse_down())
     # for x in root:
     #     print(x.edits)
 
 
 """
+#1 https://stackoverflow.com/questions/48190959/how-do-i-append-a-string-to-a-path-in-python
+
 self.args = args
 self.env_configs = env_configs
 self.suite_array = {}
