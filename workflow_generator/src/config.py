@@ -148,7 +148,7 @@ class Node:
             else {x: self._data["edits"][x] for x in self._data["edits"]}
         )
 
-    def add_edits(self, node=None):
+    def add_edits(self):
         """add edits to the node"""
             self.ecf_instance.add(stubs.Edit(**self.edits))
 
