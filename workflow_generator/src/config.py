@@ -7,7 +7,6 @@ from collections.abc import Mapping
 import os
 import pathlib
 from typing import Any, Dict, List, Union
-import os
 import yaml
 
 import stubs
