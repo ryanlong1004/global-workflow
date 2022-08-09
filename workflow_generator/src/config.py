@@ -58,8 +58,7 @@ def get_environment_value(value, indicator_token=ENV_TOKEN) -> Any:
     try:
         return os.environ[value.split(".", 1)[1]]
     except KeyError:
-        pass  # TODO remove
-        # log.warning("environment variable not found: [%s]", value.split(".", 1)[1])
+        log.warning("environment variable not found: [%s]", value.split(".", 1)[1])
     return value
 
 
