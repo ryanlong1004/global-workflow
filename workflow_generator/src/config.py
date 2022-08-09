@@ -134,14 +134,6 @@ class Node:
         except AttributeError:
             return []
 
-    def __fetch(self, key):
-        print(key)
-        return (
-            {}
-            if key not in self._data
-            else {x: self._data[key][x] for x in self._data[key]}
-        )
-
     @property
     def nodes(self):
         """returns nodes"""
