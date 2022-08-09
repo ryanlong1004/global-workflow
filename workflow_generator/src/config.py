@@ -4,17 +4,22 @@ Abstracts the configuration and environment from ECF
 
 import logging
 from collections.abc import Mapping
-from typing import Any, Dict, List
 import os
 import pathlib
+from typing import Any, Dict, List, Union
+import os
 import yaml
+
 import stubs
+
 
 log = logging.getLogger(__name__)
 
 KEYWORDS = ["tasks", "edits", "nodes", "triggers", "events"]
 DEFAULT_ENCODING = "utf-8"
 ENV_TOKEN = "env."
+
+NODE_TYPES = {"suite": stubs.Suite, "family": stubs.Family, "task": stubs.Task}
 
 
 class Config:
@@ -96,7 +101,7 @@ def add_externs(env_configs, DEFS):
 class Node:
     """encapsulates every type of Node"""
 
-    def __init__(self, name, data, parent):
+    def __init__(self, name: str, data: Any, parent: Union["Node", None]):
         self.name = name
         self.parent = parent
         self._data = sub_env_values(data)
@@ -108,16 +113,10 @@ class Node:
         """returns the ecf class equivalent based on type"""
         if self._ecf_instance is None:
             try:
-                clz = getattr(stubs, self.type.capitalize())
-                self._ecf_instance = clz(self.name)
-            except AttributeError:
-                pass
-            except TypeError:
-                pass
+                self._ecf_instance = NODE_TYPES[self.type.lower()](self.name)
+            except KeyError:
+                return None
         return self._ecf_instance
-
-    def __getattribute__(self, item):
-        return getattr(self.ecf_instance, item)
 
     def __str__(self):
         return f"<{self.type.capitalize()} {[self.name]} {['None' if self.parent is None else self.parent.name]}/>"
@@ -129,32 +128,49 @@ class Node:
         return iter(self.children)
 
     @property
-    def edits(self):
-        """returns edits"""
-        return [] if "edits" not in self._data else self._data["edits"]
-
-    @property
-    def nodes(self):
-        """returns nodes"""
-        return [] if "nodes" not in self._data else self._data["nodes"]
-
-    @property
-    def triggers(self):
-        """returns triggers"""
-        return [] if "nodes" not in self._data else self._data["triggers"]
-
-    @property
-    def tasks(self):
-        """returns tasks"""
-        return [] if "nodes" not in self._data else self._data["tasks"]
-
-    @property
     def children(self):
         """returns children"""
         try:
             return [Node(k, v, self) for (k, v) in self._data.items()]
         except AttributeError:
             return []
+
+    def __fetch(self, key):
+        return (
+            {}
+            if key not in self._data
+            else {x: self._data[key][x] for x in self._data[key]}
+        )
+
+    @property
+    def nodes(self):
+        """returns nodes"""
+        return [Node(x, self._data["nodes"][x], self) for x in self._data["nodes"]]
+
+    @property
+    def edits(self):
+        """returns edits"""
+        return self.__fetch("edits")
+
+    @property
+    def triggers(self):
+        """returns triggers"""
+        return self.__fetch("triggers")
+
+    @property
+    def tasks(self):
+        """returns tasks"""
+        return self.__fetch("tasks")
+
+    @property
+    def events(self):
+        """returns tasks"""
+        return self.__fetch("events")
+
+    @property
+    def template(self):
+        """returns tasks"""
+        return None if "template" not in self._data else self._data["template"]
 
     @property
     def type(self) -> str:
@@ -206,26 +222,50 @@ class Node:
 
 
 if __name__ == "__main__":
+    SKIP = ["suite", "node", "nodes"]
+
     root = pathlib.Path(".")
     config = Config.from_yaml(pathlib.Path("../ecflow_build.yml"))
     config = config + {}
+    defs = stubs.Defs()
     for suite in config.suites:
-        for node in suite.traverse_down():
+        defs.add_suite(suite.ecf_instance)
+        for (k, v) in suite.edits.items():
+            pass
+            # suite.ecf_instance.edit(k, v) #TODO?
+        for node in suite.nodes:
+            if node.type == "family":
+                print(node.edits)
             print(node)
-            # print(node.ecf_instance)
-            # print(pathlib.Path(root / node.local_path)) #1
-            print(type(node.ecf_instance))
-    #         print(node._data)
-    # print("*" * 8)
+            print("****************")
+            print(node.traverse_down())
+            print("\n")
 
-    # if "nodes" in config["suites"][suite]:
-    #     for node in config["suites"][suite]["nodes"]:
-    #         print(node)
-    # print(node)
-    # s.add_edit(f"{edit} {config['suites'][suite]['edits'][edit]}")
-    # print(root.traverse_down())
-    # for x in root:
-    #     print(x.edits)
+        # defs.add_suite(suite.ecf_instance)
+        # for x in suite.children:
+        #     print(x)
+
+        #     print(node)
+        #     if node.parent is None or node.type in SKIP:
+        #         continue
+        #     if node.type == 'family':
+        #         print("Adding family")
+        #         print(node.type)
+        #         print(node.parent)
+        #         node.parent.ecf_instance.add_family(node, node.name)
+        #     if node.type == 'edits':
+        #         print("**********")
+        #         for edit in node.edits:
+        #             print(edit)
+        #             # node.parent.ecf_instance.edit()
+        #         print("**********")
+
+        #     #     print("Adding family to suite")
+        #     # if node.type == 'tasks':
+        #         print(node)
+        #     # print(node.ecf_instance)
+        #     # print(pathlib.Path(root / node.local_path)) #1
+        # exit()
 
 
 """
