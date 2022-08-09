@@ -135,6 +135,7 @@ class Node:
             return []
 
     def __fetch(self, key):
+        print(key)
         return (
             {}
             if key not in self._data
@@ -149,22 +150,55 @@ class Node:
     @property
     def edits(self):
         """returns edits"""
-        return self.__fetch("edits")
+        return (
+            {}
+            if "edits" not in self._data
+            else {x: self._data["edits"][x] for x in self._data["edits"]}
+        )
+
+    def add_edits(self, node=None):
+        for k, v in self.edits.items():
+            self.ecf_instance.add(stubs.Edit(**self.edits))
 
     @property
     def triggers(self):
         """returns triggers"""
-        return self.__fetch("triggers")
+        try:
+            return (
+                []
+                if "triggers" not in self._data
+                else [dict(x) for x in self._data["triggers"]]
+            )
+        except TypeError:
+            return []
+
+    def add_triggers(self):
+        """adds triggers to the node"""
+        self.ecf_instance.add(stubs.Trigger(*self.triggers))
 
     @property
     def tasks(self):
         """returns tasks"""
-        return self.__fetch("tasks")
+        return (
+            {}
+            if "tasks" not in self._data
+            else {x: self._data["tasks"][x] for x in self._data["tasks"]}
+        )
+
+    def add_tasks(self):
+        """TODO"""
 
     @property
     def events(self):
         """returns tasks"""
-        return self.__fetch("events")
+        return (
+            {}
+            if "events" not in self._data
+            else {x: self._data["events"][x] for x in self._data["events"]}
+        )
+
+    def add_events(self):
+        """TODO"""
 
     @property
     def template(self):
