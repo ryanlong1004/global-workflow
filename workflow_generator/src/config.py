@@ -149,7 +149,7 @@ class Node:
         )
 
     def add_edits(self, node=None):
-        for k, v in self.edits.items():
+        """add edits to the node"""
             self.ecf_instance.add(stubs.Edit(**self.edits))
 
     @property
