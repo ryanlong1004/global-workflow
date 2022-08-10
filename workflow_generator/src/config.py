@@ -118,7 +118,7 @@ class Node:
             try:
                 self._ecf_instance = NODE_TYPES[self.type.lower()](self.name)
             except KeyError:
-                return None
+                self._ecf_instance = stubs.Node()
         return self._ecf_instance
 
     def __str__(self):
