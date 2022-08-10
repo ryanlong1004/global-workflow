@@ -2,6 +2,7 @@
 Abstracts the configuration and environment from ECF
 """
 
+import itertools
 import logging
 from collections.abc import Mapping
 import os
@@ -51,6 +52,7 @@ class Config:
     @staticmethod
     def from_yaml(file_path: pathlib.Path) -> "Config":
         """instantiate Config with yaml file"""
+        logger.debug("loading [%s]", file_path)
         with open(file_path, "r", encoding=DEFAULT_ENCODING) as _file:
             return Config(yaml.safe_load(_file))
 
@@ -62,7 +64,7 @@ def get_environment_value(value, indicator_token=ENV_TOKEN) -> Any:
     try:
         return os.environ[value.split(".", 1)[1]]
     except KeyError:
-        log.warning("environment variable not found: [%s]", value.split(".", 1)[1])
+        logger.warning("environment variable not found: [%s]", value.split(".", 1)[1])
     return value
 
 
@@ -96,6 +98,7 @@ def get_script_repo(env_configs):
 
 def add_externs(env_configs, DEFS):
     """TODO"""
+    logger.debug("adding externals")
     if "externs" in env_configs:
         for extern in env_configs["externs"]:
             DEFS.add_extern(extern)
@@ -146,15 +149,20 @@ class Node:
     @property
     def edits(self):
         """returns edits"""
-        return (
-            {}
-            if "edits" not in self._data
-            else {x: self._data["edits"][x] for x in self._data["edits"]}
-        )
+        try:
+            return (
+                {}
+                if self._data is None or "edits" not in self._data
+                else {x: self._data["edits"][x] for x in self._data["edits"]}
+            )
+        except AttributeError:
+            return {}
 
     def add_edits(self):
         """add edits to the node"""
-            self.ecf_instance.add(stubs.Edit(**self.edits))
+        if self.edits:
+            logging.debug("adding edits [%s] to [%s]", ",".join(self.edits), self)
+        self.ecf_instance.add(stubs.Edit(**self.edits))
 
     @property
     def triggers(self):
@@ -170,35 +178,57 @@ class Node:
 
     def add_triggers(self):
         """adds triggers to the node"""
-        self.ecf_instance.add(stubs.Trigger(*self.triggers))
+        keys = itertools.chain(*[x.keys() for x in self.triggers])
+        if self.triggers:
+            logging.debug("adding triggers [%s] to [%s]", ",".join(keys), self)
+        for trigger in self.triggers:
+            self.ecf_instance.add(stubs.Trigger(trigger))  # TODO
 
     @property
     def tasks(self):
         """returns tasks"""
-        return (
-            {}
-            if "tasks" not in self._data
-            else {x: self._data["tasks"][x] for x in self._data["tasks"]}
-        )
+        try:
+            return (
+                {}
+                if "tasks" not in self._data
+                else {x: self._data["tasks"][x] for x in self._data["tasks"]}
+            )
+        except TypeError:
+            return {}
 
     def add_tasks(self):
-        """TODO"""
+        """add tasks to the node"""
+        if self.tasks:
+            logging.debug("adding tasks [%s] to [%s]", ",".join(self.tasks), self)
+        for task in self.tasks:
+            self.ecf_instance.add(stubs.Task(task))
 
     @property
     def events(self):
-        """returns tasks"""
-        return (
-            {}
-            if "events" not in self._data
-            else {x: self._data["events"][x] for x in self._data["events"]}
-        )
+        """returns list of events or empty list"""
+        try:
+            return (
+                []
+                if "events" not in self._data
+                else [event for event in self._data["events"]]
+            )
+        except TypeError:
+            return []
 
     def add_events(self):
         """TODO"""
+        if self.events:
+            logging.debug("adding events [%s] to [%s]", ",".join(self.events), self)
+        for event in self.events:
+            self.ecf_instance.add(stubs.Event(event))
+
+    def repeat(self):
+        """returns a Repeat or None"""
+        return None if "repeat" not in self._data else self._data["repeat"]
 
     @property
     def template(self):
-        """returns tasks"""
+        """returns Template or None"""
         return None if "template" not in self._data else self._data["template"]
 
     @property
@@ -217,7 +247,6 @@ class Node:
     @property
     def local_path(self) -> str:
         """returns a / delimited string of paths based off of node names"""
-
         return "/".join(
             reversed(
                 [
@@ -251,50 +280,18 @@ class Node:
 
 
 if __name__ == "__main__":
-    SKIP = ["suite", "node", "nodes"]
-
     root = pathlib.Path(".")
     config = Config.from_yaml(pathlib.Path("../ecflow_build.yml"))
     config = config + {}
     defs = stubs.Defs()
     for suite in config.suites:
         defs.add_suite(suite.ecf_instance)
-        for (k, v) in suite.edits.items():
-            pass
-            # suite.ecf_instance.edit(k, v) #TODO?
-        for node in suite.nodes:
-            if node.type == "family":
-                print(node.edits)
-            print(node)
-            print("****************")
-            print(node.traverse_down())
-            print("\n")
-
-        # defs.add_suite(suite.ecf_instance)
-        # for x in suite.children:
-        #     print(x)
-
-        #     print(node)
-        #     if node.parent is None or node.type in SKIP:
-        #         continue
-        #     if node.type == 'family':
-        #         print("Adding family")
-        #         print(node.type)
-        #         print(node.parent)
-        #         node.parent.ecf_instance.add_family(node, node.name)
-        #     if node.type == 'edits':
-        #         print("**********")
-        #         for edit in node.edits:
-        #             print(edit)
-        #             # node.parent.ecf_instance.edit()
-        #         print("**********")
-
-        #     #     print("Adding family to suite")
-        #     # if node.type == 'tasks':
-        #         print(node)
-        #     # print(node.ecf_instance)
-        #     # print(pathlib.Path(root / node.local_path)) #1
-        # exit()
+        for x in suite.traverse_down():
+            x.add_edits()
+            x.add_events()
+            x.add_tasks()
+            x.add_triggers()
+        print("***")
 
 
 """
