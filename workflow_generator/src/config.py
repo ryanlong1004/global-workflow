@@ -20,7 +20,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-KEYWORDS = ["tasks", "edits", "nodes", "triggers", "events"]
+KEYWORDS = ["tasks", "edits", "nodes", "triggers", "events", "template", "repeat"]
 DEFAULT_ENCODING = "utf-8"
 ENV_TOKEN = "env."
 
@@ -210,7 +210,7 @@ class Node:
             return (
                 []
                 if "events" not in self._data
-                else [event for event in self._data["events"]]
+                else list(event for event in self._data["events"])
             )
         except TypeError:
             return []
@@ -243,6 +243,20 @@ class Node:
             if len(self.children) < 1:
                 self._type = "node"
         return self._type
+
+    @property
+    def is_family(self):
+        """returns true if the node is a family"""
+        if self.parent is None or self.parent.type not in ["family", "suite"] or self.type in KEYWORDS or self.name in KEYWORDS:
+            return False
+        return True
+
+    def add_family(self):
+        """adds the node as a family to parent"""
+        if self.is_family and self.parent is not None:
+            logging.debug("adding family [%s] to [%s]", self.name, self.parent.name)
+            self.parent.ecf_instance.add(stubs.Family(self.name))
+        
 
     @property
     def local_path(self) -> str:
@@ -287,6 +301,7 @@ if __name__ == "__main__":
     for suite in config.suites:
         defs.add_suite(suite.ecf_instance)
         for x in suite.traverse_down():
+            x.add_family()
             x.add_edits()
             x.add_events()
             x.add_tasks()
