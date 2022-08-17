@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class Root(object):  # from where Suite and Node derive
     """generic tree node"""
 
@@ -154,10 +157,9 @@ class Node(Root):  # from where Task and Family derive
     #     self.load.add_label(name, default)
     #     return self
 
-    # def edit(self, name, value=""):
-    #     """ add variable attribute"""
-    #     self.load.add_variable(name, value)
-    #     return self
+    def edit(self, name, value=""):
+        """add variable attribute"""
+        print(f"adding edit {name}:{value}")
 
     def variable(self, name, value=""):
         """add variable attribute"""
@@ -362,3 +364,18 @@ class Alias(Root):  # from where Suite and Node derive
 
     def nodes(self):
         return None
+
+
+class Edit:
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+class Trigger:
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+class Event:
+    def __init__(self, *args, **kwargs):
+        pass
