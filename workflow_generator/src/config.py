@@ -292,20 +292,24 @@ class Node:
         """returns the root node regardless of caller"""
         return self.traverse_up()[-1]
 
+    def bootstrap(self):
+        """conveneince to initialize node"""
+        self.add_family()
+        self.add_edits()
+        self.add_events()
+        self.add_tasks()
+        self.add_triggers()
+
 
 if __name__ == "__main__":
     root = pathlib.Path(".")
-    config = Config.from_yaml(pathlib.Path("../ecflow_build.yml"))
+    config = Config.from_yaml(pathlib.Path("../prod.yml"))
     config = config + {}
     defs = stubs.Defs()
     for suite in config.suites:
         defs.add_suite(suite.ecf_instance)
         for x in suite.traverse_down():
-            x.add_family()
-            x.add_edits()
-            x.add_events()
-            x.add_tasks()
-            x.add_triggers()
+            x.bootstrap()
         print("***")
 
 
