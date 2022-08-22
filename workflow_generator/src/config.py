@@ -96,12 +96,13 @@ def get_script_repo(env_configs):
     )
 
 
-def add_externs(env_configs, DEFS):
-    """TODO"""
+def add_externals(env_configs: Config, defs):
+    """adds externals to the definition file"""
     logger.debug("adding externals")
-    if "externs" in env_configs:
+    if 'externs' in env_configs._data:
+    # if "externs" in env_configs:
         for extern in env_configs["externs"]:
-            DEFS.add_extern(extern)
+            defs.add_extern(extern)
 
 
 class Node:
