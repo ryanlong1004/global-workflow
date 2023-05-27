@@ -1,3 +1,4 @@
+"""abstracts interface to Lua scripts"""
 import re
 
 PATTERNS = {
@@ -27,8 +28,6 @@ def read_load_module(value):
 
     The value.replace is to normalize the use of spaces and
     commas.
-
-
     """
     result = PATTERNS["load_module"].findall(value.replace(",", ", "))
     assert result is not None
@@ -39,29 +38,39 @@ def read_load_module(value):
 
 
 def read_prepend_path(value):
+    """extracts path from prepend_path command"""
     result = PATTERNS["prepend_path"].match(value)
     assert result is not None
     return result.group(1)
 
 
 def read_whatis(value):
+    """extracts 'whatis' value from command"""
     result = PATTERNS["whatis"].match(value)
     assert result is not None
     return result.group(1)
 
 
 def read_setenv(value):
+    """extracts env name and value from setenv command"""
     result = PATTERNS["setenv"].match(value)
     assert result is not None
     return (result.group(1), result.group(2))
 
 
 def get_command_type(value):
+    """returns value if known command type, otherwise false"""
     test = value.split("(", 1)[0]
     if test in COMMAND_TYPES:
         return test
     return False
 
 
-def get_all_modules_versions(data):
-    return [read_load_module(x) for x in data if get_command_type(x) == "load"]
+def unique_module_permutations(data):
+    """returns all unique modules name/version combinations from each load command"""
+    return set([read_load_module(x) for x in data if get_command_type(x) == "load"])
+
+
+def unique_module_names(data):
+    """returns all unique module names from each load command"""
+    return set([read_load_module(x)[0] for x in data if get_command_type(x) == "load"])
