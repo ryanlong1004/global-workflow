@@ -1,6 +1,7 @@
 import glob
 from pathlib import Path
-from lua_api import unique_module_names
+from lua_api import unique_module_names, unique_module_permutations
+from file_operations import write_to_csv
 import csv
 
 
@@ -15,8 +16,9 @@ def main():
         with open(x, "r") as _file:
             for y in _file:
                 lines.append(y.strip().replace("\n", ""))
-    for x in unique_module_names(lines):
-        print(x)
+    data = unique_module_permutations(lines)
+    write_to_csv(Path("./output.csv"), data)
+
     # with open("eggs.csv", "w", newline="") as csvfile:
     #     for x in module_versions:
     #         spamwriter = csv.writer(
