@@ -6,6 +6,14 @@ def test_read_load_module():
     actual = api.read_load_module('load(pathJoin("hpc", "1.1.0"))')
     assert expected == actual
 
+    expected = {"module": "rocoto", "version": None}
+    actual = api.read_load_module('load(pathJoin("rocoto"))')
+    assert expected == actual
+
+    expected = {"module": "hpss", "version": None}
+    actual = api.read_load_module('load("hpss")')
+    assert expected == actual
+
 
 def test_read_prepend_path():
     expected = {
@@ -17,9 +25,9 @@ def test_read_prepend_path():
     assert expected == actual
 
 
-def test_read_what_is():
-    expected = {"what_is": "Description: GFS run environment"}
-    actual = api.read_what_is('whatis("Description: GFS run environment")')
+def test_read_whatis():
+    expected = {"whatis": "Description: GFS run environment"}
+    actual = api.read_whatis('whatis("Description: GFS run environment")')
     assert expected == actual
 
 
