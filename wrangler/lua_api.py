@@ -28,7 +28,7 @@ def read_load_module(value):
     try:
         return {"module": result[0][1:-1], "version": result[1][1:-1]}
     except IndexError:
-        return {"module": result[0][1:-1], "version": None }
+        return {"module": result[0][1:-1], "version": None}
 
 
 def read_prepend_path(value):
@@ -57,7 +57,4 @@ def get_command_type(value):
 
 
 def get_all_modules_versions(data):
-    for x in data:
-        if get_command_type(x) == "load":
-            print(read_load_module(x))
-    # return [read_load_module(x) for x in data if get_command_type(x) == "load"]
+    return [read_load_module(x) for x in data if get_command_type(x) == "load"]
