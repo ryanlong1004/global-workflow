@@ -1,6 +1,7 @@
 import glob
 from pathlib import Path
 from lua_api import get_all_modules_versions
+import csv
 
 
 def module_files_list(pattern):
@@ -14,7 +15,13 @@ def main():
         with open(x, "r") as _file:
             for y in _file:
                 lines.append(y.strip().replace("\n", ""))
-    print(get_all_modules_versions(lines))
+    module_versions = get_all_modules_versions(lines)
+    with open("eggs.csv", "w", newline="") as csvfile:
+        for x in module_versions:
+            spamwriter = csv.writer(
+                csvfile, delimiter=",", quotechar="|", quoting=csv.QUOTE_MINIMAL
+            )
+            spamwriter.writerow([x["module"], x["version"]])
 
 
 if __name__ == "__main__":

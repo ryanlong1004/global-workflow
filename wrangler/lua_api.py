@@ -23,30 +23,37 @@ def write_whatis(description):
 
 
 def read_load_module(value):
-    result = PATTERNS["load_module"].findall(value)
+    """extracts the module and version from a 'load' command
+
+    The value.replace is to normalize the use of spaces and
+    commas.
+
+
+    """
+    result = PATTERNS["load_module"].findall(value.replace(",", ", "))
     assert result is not None
     try:
-        return {"module": result[0][1:-1], "version": result[1][1:-1]}
+        return (result[0][1:-1], result[1][1:-1])
     except IndexError:
-        return {"module": result[0][1:-1], "version": None}
+        return (result[0][1:-1], None)
 
 
 def read_prepend_path(value):
     result = PATTERNS["prepend_path"].match(value)
     assert result is not None
-    return {"module_path": result.group(1)}
+    return result.group(1)
 
 
 def read_whatis(value):
     result = PATTERNS["whatis"].match(value)
     assert result is not None
-    return {"whatis": result.group(1)}
+    return result.group(1)
 
 
 def read_setenv(value):
     result = PATTERNS["setenv"].match(value)
     assert result is not None
-    return {"name": result.group(1), "value": result.group(2)}
+    return (result.group(1), result.group(2))
 
 
 def get_command_type(value):
