@@ -1,5 +1,10 @@
 """abstracts interface to Lua scripts"""
+import glob
+import json
+from pathlib import Path
 import re
+
+import collections
 
 PATTERNS = {
     "load_module": re.compile(r"[\"\']\S*[\"\']"),
@@ -74,3 +79,34 @@ def unique_module_permutations(data):
 def unique_module_names(data):
     """returns all unique module names from each load command"""
     return set([read_load_module(x)[0] for x in data if get_command_type(x) == "load"])
+
+
+def unique_job_names(data):
+    return set([read_load_module(x)[0] for x in data if get_command_type(x) == "load"])
+
+
+def modules_and_versions_dict(data):
+    module_names = unique_module_names(data)
+    versions = unique_module_permutations(data)
+    output = {}
+    for x in module_names:
+        output[x] = []
+        for y in versions:
+            if x == y[0]:
+                output[x].append(y[1])
+    return json.dumps(
+        collections.OrderedDict(sorted([item for item in output.items()]))
+    )
+
+
+def module_files_list(pattern):
+    return [Path(x) for x in glob.glob(pattern)]
+
+
+if __name__ == "__main__":
+    lines = []
+    for x in module_files_list("/home/rlong/apps/global-workflow/modulefiles/*lua"):
+        with open(x, "r") as _file:
+            for y in _file:
+                lines.append(y.strip().replace("\n", ""))
+    print(modules_and_versions_dict(lines))
