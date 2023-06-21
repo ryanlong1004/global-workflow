@@ -81,7 +81,7 @@ class Script(UserDict):
         module_paths = self.content.get("modulepaths")
         if module_paths is None:
             return ""
-        return [f'prepend_path("MODULEPATH". pathJoin("{x}"))' for x in module_paths]
+        return [f'prepend_path("MODULEPATH", pathJoin("{x}"))' for x in module_paths]
 
     @property
     def env_variables(self) -> list[EnvVariable]:
