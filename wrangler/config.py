@@ -1,8 +1,7 @@
 """Convert yaml config files to LUA scripts"""
 import json
 import os
-from collections import UserDict, namedtuple
-from typing import Any
+from collections import namedtuple
 from pathlib import Path
 
 import yaml
@@ -64,6 +63,8 @@ mapper_lua = {
 
 
 class Script:
+    """represents a dynamic lua script from yaml file"""
+
     def __init__(self, name, data):
         self.name = name
         self.data = data
@@ -90,9 +91,9 @@ def to_Lua(scripts: list[Script], path):
 
 
 if __name__ == "__main__":
-    with open("./test.yaml", "r") as _file:
+    with open("./test.yaml", "r", encoding="utf-8") as _file:
         result = yaml.safe_load(_file)
-        new_result = {Script(x, y) for (x, y) in result.items()}
+        new_result = [Script(x, y) for (x, y) in result.items()]
         for x in new_result:
             print(x.extra)
         to_Lua(new_result, "./test.txt")
