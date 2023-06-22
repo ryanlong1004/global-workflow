@@ -8,34 +8,40 @@ from pathlib import Path
 import yaml
 
 
-def environment(values):
+def environment(values) -> list[tuple]:
+    """returns list of EnvVariables"""
     _EnvVariable = namedtuple("EnvVariable", ["key", "value"])
     return [_EnvVariable(list(x.keys())[0], list(x.values())[0]) for x in values]
 
 
-def modules(values):
+def modules(values) -> list[tuple]:
+    """returns list of Modules"""
     _Module = namedtuple("Module", ["name", "version"])
     return [
         _Module(x[0], os.environ.get(x[1])) for x in [x.split("/", 1) for x in values]
     ]
 
 
-def module_paths(values):
+def module_paths(values) -> list[Path]:
+    """returns list of PosixPaths"""
     return [Path(x) for x in values]
 
 
-def what_is(values):
+def what_is(values) -> list[tuple]:
+    """returns list of WhatIs"""
     WhatIs = namedtuple("WhatIs", ["value"])
     return [WhatIs(x) for x in values]
 
 
-def _help(values):
+def _help(values) -> list[tuple]:
+    """returns list of Help"""
     Help = namedtuple("Help", ["value"])
     return [Help(x) for x in values]
 
 
-def extra(values):
-    return {Script(x, y) for (x, y) in values.items()}
+def extra(values) -> list["Script"]:
+    """returns list of Script dicts"""
+    return [Script(x, y) for (x, y) in values.items()]
 
 
 mapper_props = {
