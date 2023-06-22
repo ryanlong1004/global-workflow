@@ -82,12 +82,12 @@ class Script:
         return None
 
 
-def to_Lua(scripts: list[Script], path):
+def to_lua(scripts: list[Script], path):
+    """converts a Script instance to a lua script"""
     with open(path, "w", encoding="utf-8") as _output:
         for script in scripts:
             # print(script)
             pass
-        exit()
 
 
 if __name__ == "__main__":
@@ -96,4 +96,4 @@ if __name__ == "__main__":
         new_result = [Script(x, y) for (x, y) in result.items()]
         for x in new_result:
             print(x.extra)
-        to_Lua(new_result, "./test.txt")
+        to_lua(new_result, "./test.txt")
