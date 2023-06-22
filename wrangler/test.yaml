@@ -6,6 +6,8 @@ common:
     - prod_util/$prod_util_ver
   environment:
     - WGRIB2: wgrib2
+  modulepaths:
+      - /lfs/h2/emc/global/save/emc.global/git/prepobs/module
   help: >
     Load environment to run prep job on WCOSS2
   whatis: >
