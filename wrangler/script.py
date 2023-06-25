@@ -2,9 +2,6 @@
 import json
 import os
 from typing import Any
-from pathlib import Path
-import yaml
-
 
 def ensure_list(value):
     """ensures a value is a list or coerces to list of len 1"""
@@ -14,6 +11,8 @@ def ensure_list(value):
 def environment(values: list[dict[str, Any]]) -> list[str]:
     """returns list of EnvVariables"""
     results = []
+    if not values:
+        return results
     for value in ensure_list(values):
         for key, value in value.items():
             results.append(f'setenv("{key}", "{value}")\n')
@@ -23,37 +22,46 @@ def environment(values: list[dict[str, Any]]) -> list[str]:
 def modules(values: list[str]) -> list[str]:
     """returns list of Modules"""
     results = []
+    if not values:
+        return results
     for value in ensure_list(values):
         key, _value = value.split("/")
         results.append(f'load(pathJoin("{key}", "{os.environ.get(_value)}"))\n')
     return results
 
 
-def module_paths(values) -> list[str]:
+def module_paths(values: list[str]) -> list[str]:
     """returns list of PosixPaths"""
+    if not values:
+        return []
     return [f'prepend_path("MODULEPATH", pathJoin("{_path}"))\n' for _path in values]
 
 
-def what_is(values) -> list[str]:
+def what_is(values: list[str]) -> list[str]:
     """returns list of WhatIs"""
+    if not values:
+        return []
     return [f'whatis("{value}")\n' for value in ensure_list(values)]
 
 
-def _help(values) -> list[str]:
+def _help(values: list[str]) -> list[str]:
     """returns list of Help"""
+    if not values:
+        return []
     return [f"help([[{value}]])\n" for value in ensure_list(values)]
 
 
-def extra(values) -> list[str]:
-    """returns list of Script dicts"""
+def extra(value: dict[str, Any]) -> list[str]:
+    """converts extra dicts"""
     results = []
-    for value in ensure_list(values):
-        for key, _values in value.items():
-            results.append(*mapper_props[key](_values))
+    if not value:
+        return results
+    for key, _values in value.items():
+        results.append(*MAPPER_PROPS[key](_values))
     return results
 
 
-mapper_props = {
+MAPPER_PROPS = {
     "modules": modules,
     "modulepaths": module_paths,
     "environment": environment,
@@ -77,9 +85,8 @@ class Script:
         return (x for x in self.data.items())
 
     def __getattr__(self, name):
-        print(name)
         if name in self.data:
-            return mapper_props[name](
+            return MAPPER_PROPS[name](
                 [self.data[name]]
                 if isinstance(self.data[name], str)
                 else self.data[name]
@@ -101,11 +108,17 @@ def to_lua(_script: Script) -> list[str]:
     order = ["help", "modulepaths", "environment", "modules", "whatis", "extra"]
     results = []
     for key in order:
-        for _line in mapper_props[key](_script.get(key, [])):
+        for _line in MAPPER_PROPS[key](_script.get(key, None)):
             results.append(_line)
     return results
 
 
-def get_common(scripts: list[Script]) -> Script:
+def find_script(name: str, scripts: list[Script]) -> Script:
     """returns common script if it exists"""
-    return list(filter(lambda x: x.name == "common", scripts))[0]
+    try:
+        return list(filter(lambda x: x.name == name, scripts))[0]
+    except IndexError as err:
+        raise ScriptNotFound(f"script {name} not found") from err
+    
+class ScriptNotFound(Exception):
+    """Raised when a script name is not found"""

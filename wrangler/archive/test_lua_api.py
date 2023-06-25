@@ -1,4 +1,4 @@
-import lua_api as api
+import archive.lua_api as api
 
 
 def test_read_load_module():
