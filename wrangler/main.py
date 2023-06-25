@@ -1,48 +1,39 @@
-"""Main execution"""
-import glob
-from pathlib import Path
-from lua_api import unique_module_names, unique_module_permutations
-from file_operations import write_to_csv
-import csv
+"""main execution"""
+
 import logging
+from pathlib import Path
+
 import yaml
-from config import Config
+
+from script import Script, get_common, to_lua
 
 
-def module_files_list(pattern):
-    return [Path(x) for x in glob.glob(pattern)]
+def load_scripts_from_yamls(_paths: list[Path]) -> list[Script]:
+    results = []
+    for _path in _paths:
+        logging.info('extracting scripts from %s', _path)
+        with open(_path, "r", encoding="utf-8") as _file:
+            results.extend([Script(name, data) for (name, data) in yaml.safe_load(_file).items()])
+    return results
 
-
-def find_errors():
-    pass
-
+def write_scripts_to_lua(output_path: Path, scripts: list[Script]) -> None:
+    for script in scripts:
+        with open(Path(output_path / f"{script.name}.lua"), "w", encoding="utf-8") as _output:
+            _output.writelines(to_lua(get_common(scripts)))
+            _output.writelines(to_lua(script))
 
 def main():
-    """main execution"""
-
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s %(levelname)s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         filename="wrangler.log",
     )
-    
-    with open('./test.yaml', 'r') as _file:
-        result = yaml.safe_load(_file)
-        config = Config(result)
-        print(config)
-        for x in config.scripts:
-            print(x)
-        
-    
 
-    # lines = []
-    # for x in module_files_list("/home/rlong/apps/global-workflow/modulefiles/*lua"):
-    #     with open(x, "r") as _file:
-    #         for y in _file:
-    #             lines.append(y.strip().replace("\n", ""))
+    _input = "./test.yaml"
     
-
+    scripts = load_scripts_from_yamls([Path(_input)])
+    write_scripts_to_lua(Path("./"), scripts)
 
 if __name__ == "__main__":
     main()

@@ -24,7 +24,8 @@ eobs:
       - /lfs/h2/emc/global/save/emc.global/git/prepobs/module
 
 prep:
-  modules: &flag 
+  # modules: 
+  modules: 
     - hdf5/$hdf5_ver
     - netcdf/$netcdf_ver
     - cray-mpich/$cray_mpich_ver
@@ -34,4 +35,4 @@ prep:
       - /lfs/h2/emc/global/save/emc.global/git/prepobs/module
     modules:
       - prepobs/$prepobs_ver
-      - *flag
+      # - *flag
